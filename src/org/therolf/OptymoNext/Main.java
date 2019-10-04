@@ -1,16 +1,14 @@
 package org.therolf.OptymoNext;
 
-import org.jsoup.Jsoup;
-import org.jsoup.select.Elements;
 import org.therolf.OptymoNext.model.OptymoLine;
 import org.therolf.OptymoNext.model.OptymoNetwork;
+import org.therolf.OptymoNext.model.OptymoNextTime;
 import org.therolf.OptymoNext.model.OptymoStop;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.io.IOException;
 
 @SuppressWarnings({"FieldCanBeLocal", "MismatchedQueryAndUpdateOfCollection"})
 public class Main {
@@ -26,6 +24,8 @@ public class Main {
     private JTable table;
     private JLabel label;
 
+    private FavWindow favWindow = null;
+
     private Main() {
         OptymoNetwork network = new OptymoNetwork();
         network.begin(stopsJson, linesXml, false);
@@ -37,6 +37,7 @@ public class Main {
         DefaultTableModel model = new DefaultTableModel();
         model.setColumnIdentifiers(columns);
         table = new JTable(model);
+        table.getTableHeader().setReorderingAllowed(false);
         table.setEnabled(false);
 
         label = new JLabel();
@@ -47,9 +48,7 @@ public class Main {
 
         JScrollPane scrollPane = new JScrollPane();
         JList<OptymoStop> list = new JList<>(network.getStops());
-        list.addListSelectionListener(e -> {
-            this.displayTab(list.getSelectedValue());
-        });
+        list.addListSelectionListener(e -> this.displayTab(list.getSelectedValue()));
         scrollPane.setViewportView(list);
 
         // search for line then for stop
@@ -74,7 +73,7 @@ public class Main {
         });
         stopsComboBox.addActionListener(e -> {
             OptymoStop stop = (OptymoStop) stopsComboBox.getSelectedItem();
-            if(stop != null) {
+            if(stop != null && linesComboBox.getSelectedItem() != null) {
                 displayTab(stop, ((OptymoLine) linesComboBox.getSelectedItem()).getNumber());
             }
         });
@@ -90,40 +89,38 @@ public class Main {
 
         frame.getContentPane().add(BorderLayout.NORTH, lineSearch);
 
+        JButton favButton = new JButton("FAVORIS");
+        favButton.addActionListener(e -> displayFavWindow(network));
+        frame.getContentPane().add(BorderLayout.SOUTH, favButton);
+
         frame.pack();
         frame.setSize(800, 600);
         frame.setVisible(true);
+    }
+
+    private void displayFavWindow(OptymoNetwork network) {
+        if(favWindow == null) {
+            favWindow = new FavWindow(network);
+        } else {
+            if(!favWindow.isVisible()) {
+                favWindow.setVisible(true);
+            }
+        }
     }
 
     private void displayTab(OptymoStop stop) {
         displayTab(stop, 0);
     }
 
-    private void displayTab(OptymoStop stop, int filter) {
+    private void displayTab(OptymoStop stop, int lineFilter) {
+        ((DefaultTableModel)table.getModel()).setNumRows(0);
 
-        org.jsoup.nodes.Document doc;
-        Elements errorTitle, directions, nextTimes, lines;
-        doc = null;
-        try {
-            doc = Jsoup.connect("https://siv.optymo.fr/passage.php?ar=" + stop.getKey() + "&type=1").get();
-        } catch (IOException ignored) {}
+        OptymoNextTime[] nextTimes = stop.getNextTimes(lineFilter);
 
-        if(doc != null) {
-            errorTitle = doc.getElementsByTag("h3");
-            ((DefaultTableModel)table.getModel()).setNumRows(0);
-            if(errorTitle.size() == 0) {
-
-                lines = doc.getElementsByClass("f1");
-                directions = doc.getElementsByClass("f2");
-                nextTimes = doc.getElementsByClass("f3");
-
-                label.setText(stop.getName());
-                for(int directionIndex = 0; directionIndex < directions.size(); directionIndex++) {
-                    if(filter == 0 || filter == Integer.parseInt(lines.get(directionIndex).text())) {
-                        ((DefaultTableModel) table.getModel()).addRow(new Object[]{ lines.get(directionIndex).text(), directions.get(directionIndex).text(), nextTimes.get(directionIndex).text()});
-                    }
-                }
-            }
+        for (OptymoNextTime nextTime : nextTimes) {
+            ((DefaultTableModel) table.getModel()).addRow(new Object[]{"" + nextTime.getLineNumber(), nextTime.getDirection(), nextTime.getNextTime()});
         }
+
+        label.setText(stop.getName());
     }
 }
