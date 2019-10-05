@@ -73,9 +73,6 @@ public class OptymoNetwork {
 
                         addOptymoStop(stop.getString("name"));
                         JSONArray directions = stop.getJSONArray("directions");
-                        for (int a  = 0; a < directions.length(); ++a) {
-                            // System.out.println(directions.getString(a));
-                        }
                     }
                 }
 
@@ -206,5 +203,23 @@ public class OptymoNetwork {
         Collections.sort(list);
         System.err.println(list.size());
         return list.toArray(new OptymoLine[0]);
+    }
+
+    public OptymoStop getStopByKey(String key) {
+        OptymoStop result = null, tmp;
+        int i = 0;
+        Object[] keys = stops.keySet().toArray();
+        do
+        {
+            //noinspection SuspiciousMethodCalls
+            tmp = stops.get(keys[i]);
+            if(tmp.getKey().equals(key)) {
+                result = tmp;
+            }
+
+            ++i;
+        } while (result == null && i < keys.length);
+
+        return result;
     }
 }
