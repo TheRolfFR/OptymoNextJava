@@ -1,12 +1,12 @@
-#How I reverse engineered my bus stop service to make my own app : Part 1 : Get the data.
+# How I reverse engineered my bus stop service to make my own app : Part 1 : Get the data.
 
-##Introduction 
+## Introduction 
 
 I live in Belfort and I do use the bus service [Optymo](https://www.optymo.fr) daily and need to continuously check fastly when the next bus will be coming. However, nothing but a big PDF is given to us to know it. What I needed is a way to check instantly from my notifications the next buses.
 
 Unfortunately, the company Optymo has no API available. I needed to find a way to recover informations such as the next stops, all the stops names and all the lines with the stops.
 <br><br>
-##The little QR Codes
+## The little QR Codes
 
 QR Codes are available to check the next buses at a given stop. So let's use it. The most interesting data of the web page of this QR code is its URL. It contains some sort of slug telling what is the stop name and an index to know what line it is. However the slug is very irregular and depends a lot of the stop name which can be complicated sometimes.
 
@@ -16,7 +16,7 @@ Ex: this url [https://siv.optymo.fr/passage.php?ar=Utb01](https://siv.optymo.fr/
 
 I cannot spend weeks searching each slug for each stop and line. I need to find another solution.
 
-##The map
+## The map
 
 The Optymo website has something really interesting. It has a Google map with all the stops integrated ([link](https://www.optymo.fr))! But where did he find its stops? let's open the browser network traffic tool :
 
