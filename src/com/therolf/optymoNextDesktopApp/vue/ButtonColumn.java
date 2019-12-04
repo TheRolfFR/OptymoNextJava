@@ -1,4 +1,4 @@
-package org.therolf.OptymoNext.vue;
+package com.therolf.optymoNextDesktopApp.vue;
 
 import javax.swing.*;
 import javax.swing.border.Border;

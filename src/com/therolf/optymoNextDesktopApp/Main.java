@@ -1,16 +1,20 @@
-package org.therolf.OptymoNext;
+package com.therolf.optymoNextDesktopApp;
 
-import org.therolf.OptymoNext.model.OptymoLine;
-import org.therolf.OptymoNext.model.OptymoNetwork;
-import org.therolf.OptymoNext.model.OptymoNextTime;
-import org.therolf.OptymoNext.model.OptymoStop;
+import com.therolf.optymoNextModel.OptymoLine;
+import com.therolf.optymoNextModel.OptymoNetwork;
+import com.therolf.optymoNextModel.OptymoNextTime;
+import com.therolf.optymoNextModel.OptymoStop;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.io.*;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Calendar;
 
-@SuppressWarnings({"FieldCanBeLocal", "MismatchedQueryAndUpdateOfCollection"})
+@SuppressWarnings({"FieldCanBeLocal", "ResultOfMethodCallIgnored"})
 public class Main {
 
     public static void main(String[] args) {
@@ -27,8 +31,58 @@ public class Main {
     private FavWindow favWindow = null;
 
     private Main() {
+        Instant start = Instant.now();
         OptymoNetwork network = new OptymoNetwork();
-        network.begin(stopsJson, linesXml, false);
+        File file = new File(stopsJson);
+        InputStream is;
+        try {
+            FileInputStream jsonInputStream = new FileInputStream(file);
+            byte[] jsonBytes = new byte[jsonInputStream.available()];
+            jsonInputStream.read(jsonBytes);
+
+            is = new FileInputStream(linesXml);
+            network.begin(new String(jsonBytes), is, false);
+
+            if(!network.getResultJson().equals("")) {
+                FileOutputStream fos = new FileOutputStream(stopsJson);
+                fos.write(network.getResultJson().getBytes());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+//your code
+        Instant end = Instant.now();
+        Duration timeElapsed = Duration.between(start, end);
+        System.out.println("Time taken: "+ timeElapsed.toMillis() +" milliseconds");
+
+        new Thread(() -> {
+            network.addNetworkGenerationListener(returnValue -> {
+                // save new json
+                String resultJson = network.getResultJson();
+                if(resultJson != null && !resultJson.equals("")) {
+                    System.out.println("new network generated at " + Calendar.getInstance().getTime());
+                    FileOutputStream fos = null;
+                    try {
+                        fos = new FileOutputStream(stopsJson);
+                        fos.write(network.getResultJson().getBytes());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+
+            while (true) {
+                System.out.println("starting improving network");
+                network.improveNetwork();
+                System.out.println("stopped improving network");
+                try {
+                    Thread.sleep(1000*60*5);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
 
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBorder(new EmptyBorder(10, 0, 10, 10));
@@ -115,7 +169,12 @@ public class Main {
     private void displayTab(OptymoStop stop, int lineFilter) {
         ((DefaultTableModel)table.getModel()).setNumRows(0);
 
-        OptymoNextTime[] nextTimes = stop.getNextTimes(lineFilter);
+        OptymoNextTime[] nextTimes = new OptymoNextTime[0];
+        try {
+            nextTimes = stop.getNextTimes(lineFilter);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         for (OptymoNextTime nextTime : nextTimes) {
             ((DefaultTableModel) table.getModel()).addRow(new Object[]{"" + nextTime.getLineNumber(), nextTime.getDirection(), nextTime.getNextTime()});

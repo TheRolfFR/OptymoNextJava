@@ -1,26 +1,27 @@
-package org.therolf.OptymoNext.model;
+package com.therolf.optymoNextModel;
 
 import org.jsoup.Jsoup;
 import org.jsoup.select.Elements;
 
 import java.io.IOException;
+import java.text.Normalizer;
 import java.util.HashMap;
 
 @SuppressWarnings({"unused", "WeakerAccess"})
 public class OptymoStop implements Comparable<OptymoStop> {
-    private String key;
+    private String slug;
     private String name;
     private OptymoLine[] lines;
 
     @SuppressWarnings("WeakerAccess")
-    public OptymoStop(String key, String name) {
-        this.key = key;
+    public OptymoStop(String slug, String name) {
+        this.slug = slug;
         this.name = name;
         this.lines = new OptymoLine[0];
     }
 
-    public String getKey() {
-        return key;
+    public String getSlug() {
+        return slug;
     }
 
     public String getName() {
@@ -39,6 +40,7 @@ public class OptymoStop implements Comparable<OptymoStop> {
         lines = newTable;
     }
 
+    @SuppressWarnings("NullableProblems")
     @Override
     public String toString() {
         return this.name;
@@ -46,14 +48,14 @@ public class OptymoStop implements Comparable<OptymoStop> {
 
     @Override
     public int compareTo(OptymoStop o) {
-        return key.compareTo(o.key);
+        return slug.compareTo(o.slug);
     }
 
     @Override
     public boolean equals(Object obj) {
         if(obj instanceof OptymoStop) {
             OptymoStop other = (OptymoStop) obj;
-            return other.getKey().equals(this.getKey()) && this.getName().equals(other.getName());
+            return other.getSlug().equals(this.getSlug()) && this.getName().equals(other.getName());
         }
         return super.equals(obj);
     }
@@ -70,7 +72,7 @@ public class OptymoStop implements Comparable<OptymoStop> {
         Elements errorTitle, directions, lines;
         doc = null;
         try {
-            doc = Jsoup.connect("https://siv.optymo.fr/passage.php?ar=" + this.getKey() + "&type=1").get();
+            doc = Jsoup.connect("https://siv.optymo.fr/passage.php?ar=" + this.getSlug() + "&type=1").get();
         } catch (IOException ignored) {}
 
         if(doc != null) {
@@ -90,7 +92,7 @@ public class OptymoStop implements Comparable<OptymoStop> {
                                         Integer.parseInt(lines.get(directionIndex).text()),
                                         directions.get(directionIndex).text(),
                                         new String(this.name),
-                                        new String(this.key)
+                                        new String(this.slug)
                                 )
                         );
                     }
@@ -107,54 +109,15 @@ public class OptymoStop implements Comparable<OptymoStop> {
         return result;
     }
 
-    public OptymoNextTime[] getNextTimes() {
-        return getNextTimes(0);
+    public OptymoNextTime[] getNextTimes() throws IOException {
+        return OptymoNetwork.getNextTimes(this.slug, 0);
     }
 
-    @SuppressWarnings("StringOperationCanBeSimplified")
-    public OptymoNextTime[] getNextTimes(int lineFilter) {
-        OptymoNextTime[] result = new OptymoNextTime[0];
+    public OptymoNextTime[] getNextTimes(int lineFilter) throws IOException {
+        return OptymoNetwork.getNextTimes(this.slug, lineFilter);
+    }
 
-        org.jsoup.nodes.Document doc;
-        Elements errorTitle, directions, nextTimes, lines;
-        doc = null;
-        try {
-            doc = Jsoup.connect("https://siv.optymo.fr/passage.php?ar=" + this.getKey() + "&type=1").get();
-        } catch (IOException ignored) {}
-
-        if(doc != null) {
-            errorTitle = doc.getElementsByTag("h3");
-            if(errorTitle.size() == 0) {
-
-                lines = doc.getElementsByClass("f1");
-                directions = doc.getElementsByClass("f2");
-                nextTimes = doc.getElementsByClass("f3");
-
-                HashMap<String, OptymoNextTime> resultMap = new HashMap<>();
-
-                for(int directionIndex = 0; directionIndex < directions.size(); directionIndex++) {
-                    if((lineFilter == 0 || lineFilter == Integer.parseInt(lines.get(directionIndex).text())) && !resultMap.containsKey(directions.get(directionIndex).text())) {
-                        resultMap.put(
-                                directions.get(directionIndex).text(),
-                                new OptymoNextTime(
-                                        Integer.parseInt(lines.get(directionIndex).text()),
-                                        directions.get(directionIndex).text(),
-                                        new String(this.name),
-                                        new String(this.key),
-                                        nextTimes.get(directionIndex).text()
-                                )
-                        );
-                    }
-                }
-
-                result = resultMap.values().toArray(new OptymoNextTime[0]);
-            } else {
-                System.err.println("stop not found");
-            }
-        } else {
-            System.err.println("cannot access page");
-        }
-
-        return result;
+    public static String nameToSlug(String stopName) {
+        return Normalizer.normalize(stopName, Normalizer.Form.NFD).replaceAll("[^A-Za-z0-9]", "").toLowerCase();
     }
 }

@@ -1,23 +1,21 @@
-package org.therolf.OptymoNext;
+package com.therolf.optymoNextDesktopApp;
 
+import com.therolf.optymoNextModel.OptymoDirection;
+import com.therolf.optymoNextModel.OptymoNetwork;
+import com.therolf.optymoNextModel.OptymoNextTime;
+import com.therolf.optymoNextModel.OptymoStop;
+import com.therolf.optymoNextDesktopApp.vue.ButtonColumn;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONStringer;
 import org.json.JSONWriter;
-import org.therolf.OptymoNext.model.OptymoDirection;
-import org.therolf.OptymoNext.model.OptymoNetwork;
-import org.therolf.OptymoNext.model.OptymoNextTime;
-import org.therolf.OptymoNext.model.OptymoStop;
-import org.therolf.OptymoNext.vue.ButtonColumn;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.io.FileInputStream;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.nio.file.Path;
+import java.io.*;
+import java.nio.file.FileSystems;
 import java.util.ArrayList;
 import java.util.Comparator;
 
@@ -110,9 +108,14 @@ public class FavWindow extends JFrame {
         int i;
         for (OptymoDirection direction : favorites) {
             nextTimeString = "";
-            OptymoStop stop = network.getStopByKey(direction.getStopKey());
+            OptymoStop stop = network.getStopBySlug(direction.getStopSlug());
             if(stop != null) {
-                OptymoNextTime[] nextTimes = stop.getNextTimes();
+                OptymoNextTime[] nextTimes = new OptymoNextTime[0];
+                try {
+                    nextTimes = stop.getNextTimes();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
                 i = 0;
                 while(nextTimeString.equals("") && i < nextTimes.length) {
                     if(direction.equals(nextTimes[i])) {
@@ -148,7 +151,7 @@ public class FavWindow extends JFrame {
                     .key("stopName")
                     .value(favorite.getStopName())
                     .key("stopSlug")
-                    .value(favorite.getStopKey())
+                    .value(favorite.getStopSlug())
                     .endObject();
         }
 
@@ -168,7 +171,7 @@ public class FavWindow extends JFrame {
         this.favorites = new ArrayList<>();
 
         try {
-            String jsonPath = Path.of("res/favorites.json").toAbsolutePath().toString();
+            String jsonPath = FileSystems.getDefault().getPath("res", "favorites.json").toAbsolutePath().toString();
 
             FileInputStream jsonInputStream = null;
             try {
@@ -176,7 +179,13 @@ public class FavWindow extends JFrame {
             } catch (IOException ignored) {}
 
             if(jsonInputStream != null) {
-                JSONArray array = new JSONArray(new String(jsonInputStream.readAllBytes()));
+                ByteArrayOutputStream os = new ByteArrayOutputStream();
+                byte[] buffer = new byte[0xFFFF];
+                for (int len = jsonInputStream.read(buffer); len != -1; len = jsonInputStream.read(buffer)) {
+                    os.write(buffer, 0, len);
+                }
+
+                JSONArray array = new JSONArray(new String(os.toByteArray()));
 
                 for (int i = 0; i < array.length(); i++) {
 

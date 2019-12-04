@@ -48,7 +48,7 @@ What is this script? belfort.js ? There are some API keys, let's see what I can 
 stopsuggestionengine.js ? That's what I am looking for!
 
 ![stops_suggestion.png](https://therolf.fr/anchor/content/stops_suggestion.png)
-Nice! There is a URL that use the API key to get the stops!
+Nice! There is a URL that use the API slug to get the stops!
 
 `"url" : '//app.mecatran.com/' + apiPath + instance + '?includeStops='+ includeStops +'&includeStations='+ includeStations +'&apiKey=' + apiKey`
 
