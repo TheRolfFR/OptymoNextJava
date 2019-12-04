@@ -18,7 +18,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.text.Normalizer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 
@@ -146,39 +145,34 @@ public class OptymoNetwork {
 
     /**
      * This methods is used to increase lines going through stops
-     * so for each stop I get their next stops and add a new line to the stop
+     * so for each stop I get their next stops and add a new stop to the line
      * problem due to "hub" stops in the ntwork they have many lines coming
      */
     @SuppressWarnings("UnusedReturnValue")
     public String improveNetwork() {
-        boolean modified = false;
-        ArrayList<OptymoLine> lines = new ArrayList<>();
+        int modified = 0;
 
-        for (String key : stops.keySet()) {
-            OptymoStop stop = stops.get(key);
+        System.out.println("Network with " + stops.size() + " stops");
+        for (OptymoStop stop : stops.values()) {
+            // get avalable directions
+            OptymoDirection[] directions = stop.getAvailableDirections();
 
-            // clear and refill line arraylist
-            lines.clear();
-            lines.addAll(Arrays.asList(stop.getLines()));
-
-            try {
-                OptymoNextTime[] arr = stop.getNextTimes();
-
-                for (OptymoNextTime nextTime : arr) {
-                    OptymoLine l = this.getLineByNumberAndName(nextTime.getLineNumber(), nextTime.getDirection());
-                    if(l != null && !lines.contains(l)) {
-                        stop.addLineToStop(l);
-                        modified = true;
+            OptymoLine l;
+            for(OptymoDirection dir : directions) {
+                // get and or create line
+                l = getLine("" + dir.getLineNumber(), dir.getDirection());
+                if(l != null) {
+                    if(l.addStopToLine(stop)) {
+                        System.out.println("added " + stop + " stop to line " + l);
+                        ++modified;
                     }
                 }
-            } catch (IOException e) {
-                e.printStackTrace();
             }
         }
 
-        if(modified) {
-            System.out.println("improved network");
-            this.generateJSONNetworkFile();
+        if(modified != 0) {
+            System.out.println("improved network " + modified + " times");
+            return this.generateJSONNetworkFile();
         }
 
         return resultJson;
@@ -188,34 +182,33 @@ public class OptymoNetwork {
     private String generateJSONNetworkFile() {
         JSONStringer jsonStringer = new JSONStringer();
         jsonStringer.object();
-
-        // add each single stop
-        jsonStringer.key(STOPS_ARRAY_KEY).array();
-        for(OptymoStop stop : stops.values()) {
-            jsonStringer.object()
+            // add each single stop
+            jsonStringer.key(STOPS_ARRAY_KEY).array();
+            for(OptymoStop stop : stops.values()) {
+                jsonStringer.object()
                     .key(STOP_SLUG_KEY).value(stop.getSlug())
                     .key(STOP_NAME_KEY).value(stop.getName())
-            .endObject();
-        }
-        jsonStringer.endArray();
+                .endObject();
+            }
+            jsonStringer.endArray();
 
-        // add each single line
-        jsonStringer.key(LINES_ARRAY_KEY).array();
-        for(OptymoLine line : lines.values()) {
-            jsonStringer.object()
-                .key(LINE_NUMBER_KEY).value(line.getNumber())
-                .key(LINE_NAME_KEY).value(line.getName())
-                .key(LINE_STOPS_ARRAY_KEY)
-                .array();
-                for(OptymoStop stop : line.getStops()) {
-                    jsonStringer.value(stop.getSlug());
-                }
-                jsonStringer.endArray()
-            .endObject();
-        }
-
+            // add each single line
+            jsonStringer.key(LINES_ARRAY_KEY).array();
+            for(OptymoLine line : lines.values()) {
+                jsonStringer.object()
+                    .key(LINE_NUMBER_KEY).value(line.getNumber())
+                    .key(LINE_NAME_KEY).value(line.getName())
+                    .key(LINE_STOPS_ARRAY_KEY)
+                    .array();
+                        for(OptymoStop stop : line.getStops()) {
+                            jsonStringer.value(stop.getSlug());
+                        }
+                    jsonStringer.endArray()
+                .endObject();
+            }
+            jsonStringer.endArray();
         //affect result json
-        resultJson = jsonStringer.toString();
+        resultJson = jsonStringer.endObject().toString();
 
         for(ProgressListener p : networkGenerationListeners) {
             p.OnGenerationEnd(true);

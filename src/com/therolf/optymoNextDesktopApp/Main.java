@@ -57,25 +57,20 @@ public class Main {
         System.out.println("Time taken: "+ timeElapsed.toMillis() +" milliseconds");
 
         new Thread(() -> {
-            network.addNetworkGenerationListener(returnValue -> {
-                // save new json
-                String resultJson = network.getResultJson();
+            while (true) {
+                System.out.println("starting improving network");
+                String resultJson  = network.improveNetwork();
+                System.out.println("stopped improving network");
                 if(resultJson != null && !resultJson.equals("")) {
-                    System.out.println("new network generated at " + Calendar.getInstance().getTime());
-                    FileOutputStream fos = null;
+                    FileOutputStream fos; // = null
                     try {
                         fos = new FileOutputStream(stopsJson);
                         fos.write(network.getResultJson().getBytes());
+                        System.out.println("new network generated at " + Calendar.getInstance().getTime());
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
                 }
-            });
-
-            while (true) {
-                System.out.println("starting improving network");
-                network.improveNetwork();
-                System.out.println("stopped improving network");
                 try {
                     Thread.sleep(1000*60*5);
                 } catch (InterruptedException e) {
@@ -149,7 +144,7 @@ public class Main {
 
         frame.pack();
         frame.setSize(800, 600);
-        frame.setVisible(true);
+//        frame.setVisible(true);
     }
 
     private void displayFavWindow(OptymoNetwork network) {
