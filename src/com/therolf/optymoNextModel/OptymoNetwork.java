@@ -113,17 +113,19 @@ public class OptymoNetwork {
                 }
 
                 lineObject = linesArray.getJSONObject(i);
-                createdLine = getLine("" + lineObject.getInt(LINE_NUMBER_KEY), lineObject.getString(LINE_NAME_KEY));
-                stopsOfLine = lineObject.getJSONArray(LINE_STOPS_ARRAY_KEY);
-                //noinspection UnusedAssignment
-                foundStop = null;
+                if(!OptymoStop.nameToSlug(lineObject.getString(LINE_NAME_KEY)).contains("depot")) {
+                    createdLine = getLine("" + lineObject.getInt(LINE_NUMBER_KEY), lineObject.getString(LINE_NAME_KEY));
+                    stopsOfLine = lineObject.getJSONArray(LINE_STOPS_ARRAY_KEY);
+                    //noinspection UnusedAssignment
+                    foundStop = null;
 
-                for(int a = 0; a < stopsOfLine.length(); a++) {
-                    stopSlug = stopsOfLine.getString(a);
-                    foundStop = getStopBySlug(stopSlug);
+                    for(int a = 0; a < stopsOfLine.length(); a++) {
+                        stopSlug = stopsOfLine.getString(a);
+                        foundStop = getStopBySlug(stopSlug);
 
-                    if(foundStop != null && createdLine != null) {
-                        createdLine.addStopToLine(foundStop);
+                        if(foundStop != null && createdLine != null) {
+                            createdLine.addStopToLine(foundStop);
+                        }
                     }
                 }
             }
@@ -159,12 +161,15 @@ public class OptymoNetwork {
 
             OptymoLine l;
             for(OptymoDirection dir : directions) {
-                // get and or create line
-                l = getLine("" + dir.getLineNumber(), dir.getDirection());
-                if(l != null) {
-                    if(l.addStopToLine(stop)) {
-                        System.out.println("added " + stop + " stop to line " + l);
-                        ++modified;
+                // avoid storage direction
+                if(!OptymoStop.nameToSlug(dir.getDirection()).contains("depot")) {
+                    // get and or create line
+                    l = getLine("" + dir.getLineNumber(), dir.getDirection());
+                    if(l != null) {
+                        if(l.addStopToLine(stop)) {
+                            System.out.println("added " + stop + " stop to line " + l);
+                            ++modified;
+                        }
                     }
                 }
             }
@@ -463,7 +468,7 @@ public class OptymoNetwork {
 
                 result = resultMap.values().toArray(new OptymoNextTime[0]);
             } else {
-                System.err.println("stop not found");
+                System.err.println("stop not found : " + stopSlug);
             }
         } else {
             System.err.println("cannot access page");

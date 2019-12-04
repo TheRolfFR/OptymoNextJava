@@ -100,7 +100,7 @@ public class OptymoStop implements Comparable<OptymoStop> {
 
                 result = resultMap.values().toArray(new OptymoDirection[0]);
             } else {
-                System.err.println("stop not found");
+                System.err.println("stop not found : " + this.getName());
             }
         } else {
             System.err.println("cannot access page");
